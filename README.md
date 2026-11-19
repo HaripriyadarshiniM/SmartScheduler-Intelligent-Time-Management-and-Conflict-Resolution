@@ -89,7 +89,7 @@ http://127.0.0.5:5000
 
 **Haripriyadarshini M**
 
-GitHub: [HaripriyadarshiniM](https://github.com/HaripriyadarshiniM)
+GitHub: https://github.com/HaripriyadarshiniM/SmartScheduler-Intelligent-Time-Management-and-Conflict-Resolution
 
 ---
 
