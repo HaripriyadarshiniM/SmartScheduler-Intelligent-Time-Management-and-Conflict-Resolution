@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoSync - Intelligent Schedule Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080c14;
+            --surface: #024C43;
+            --surface2: #161e2e;
+            --surface3: #1c2740;
+            --border: #1e2d47;
+            --text: #F2F5F5;
+            --text-muted: #F2F5F5;
+            --text-dim: #94a3b8;
+            --accent: #3b82f6;
+            --accent2: #7c3aed;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --orange: #f97316;
+            --radius: 10px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Manrope', sans-serif; font-size: 14px; min-height: 100vh; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ── Modal overlay ── */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.hidden { display: none; }
+        .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 460px; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .modal-header h2 { font-size: 18px; font-family: 'Archivo Black', sans-serif; }
+        .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 22px; line-height: 1; padding: 4px 8px; border-radius: 6px; transition: .15s; }
+        .close-btn:hover { background: var(--surface3); color: var(--text); }
+
+        /* ── Auth ── */
+        .auth-container { max-width: 400px; }
+        .auth-header { text-align: center; margin-bottom: 28px; }
+        .brand-logo { font-family: 'Archivo Black', sans-serif; font-size: 28px; background: linear-gradient(135deg, #3b82f6, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .auth-subtitle { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+        .auth-tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+        .auth-tab { flex: 1; padding: 9px; border: none; background: none; color: var(--text-muted); border-radius: 8px; cursor: pointer; font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 13px; transition: .2s; }
+        .auth-tab.active { background: var(--accent); color: #fff; }
+        .auth-form { display: none; flex-direction: column; gap: 16px; }
+        .auth-form.active { display: flex; }
+        .auth-message { margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px; }
+        .auth-message.error { color: var(--red); }
+        .auth-message.success { color: var(--green); }
+
+        /* ── Form elements ── */
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+        .input-group input, .input-group textarea, .input-group select {
+            background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+            padding: 10px 14px; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-size: 14px;
+            transition: border-color .2s;
+        }
+        .input-group input:focus, .input-group textarea:focus, .input-group select:focus { outline: none; border-color: var(--accent); }
+        .input-group input[type="color"] { padding: 4px 8px; height: 42px; cursor: pointer; }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-dim); font-size: 13px; }
+        .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+
+        /* ── Buttons ── */
+        .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 11px 22px; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: opacity .2s, transform .1s; }
+        .btn-primary:hover { opacity: .9; }
+        .btn-primary:active { transform: scale(.98); }
+        .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); padding: 10px 18px; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: .2s; }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+        .btn-danger { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: var(--red); padding: 10px 18px; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: .2s; }
+        .btn-danger:hover { background: rgba(239,68,68,.2); }
+        .btn-warning { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35); color: var(--yellow); padding: 10px 18px; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: .2s; }
+        .btn-warning:hover { background: rgba(245,158,11,.22); }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+
+        /* ── App layout ── */
+        .main-app.hidden { display: none; }
+        .app-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .user-greeting { color: var(--text-muted); font-size: 13px; }
+        .btn-optimize { display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; padding: 9px 18px; border-radius: var(--radius); font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; transition: opacity .2s; }
+        .btn-optimize:hover { opacity: .9; }
+        .btn-icon { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); padding: 9px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-family: 'Manrope', sans-serif; font-weight: 600; transition: .2s; display: flex; align-items: center; gap: 6px; }
+        .btn-icon:hover { border-color: var(--accent); color: var(--text); }
+
+        .main-content { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 57px); }
+
+        /* ── Sidebar ── */
+        .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 20px 16px; display: flex; flex-direction: column; gap: 24px; }
+        .section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .btn-action { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); border-radius: var(--radius); cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; transition: .2s; margin-bottom: 8px; }
+        .btn-action:hover { border-color: var(--accent); color: var(--text); background: var(--surface3); }
+        .view-toggle { display: flex; gap: 4px; }
+        .view-btn { flex: 1; padding: 8px; border: 1px solid var(--border); background: none; color: var(--text-muted); border-radius: 8px; cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; transition: .2s; }
+        .view-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .priority-filters { display: flex; flex-direction: column; gap: 10px; }
+        .priority-checkbox { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .priority-checkbox input { accent-color: var(--accent); }
+        .priority-label { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+        .priority-label.high { background: rgba(239,68,68,.15); color: #f87171; }
+        .priority-label.medium { background: rgba(245,158,11,.15); color: #fbbf24; }
+        .priority-label.low { background: rgba(16,185,129,.15); color: #34d399; }
+        .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .stat-item:last-child { border-bottom: none; }
+        .stat-label { font-size: 12px; color: var(--text-muted); }
+        .stat-value { font-size: 18px; font-weight: 700; color: var(--text); font-family: 'Archivo Black', sans-serif; }
+        .stat-value.conflicts { color: var(--red); }
+
+        /* ── Calendar ── */
+        .calendar-section { padding: 24px; overflow-y: auto; }
+        .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .calendar-title { font-family: 'Archivo Black', sans-serif; font-size: 22px; }
+        .nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); width: 38px; height: 38px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .2s; }
+        .nav-btn:hover { border-color: var(--accent); color: var(--text); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .day-header { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; padding: 10px 0; }
+        .day-cell { min-height: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; transition: border-color .2s; position: relative; }
+        .day-cell:hover { border-color: var(--accent); }
+        .day-cell.other-month { opacity: .4; }
+        .day-cell.today { border-color: var(--accent); background: rgba(59,130,246,.06); }
+        .day-num { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .day-cell.today .day-num { background: var(--accent); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .day-cell.past-day { opacity: .45; cursor: not-allowed; }
+        .day-cell.past-day:hover { border-color: var(--border); }
+        .day-cell.holiday { background: rgba(245,158,11,.07); border-color: rgba(245,158,11,.4); cursor: not-allowed; }
+        .day-cell.holiday:hover { border-color: rgba(245,158,11,.6); }
+        .holiday-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 700; color: #f59e0b; background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); border-radius: 4px; padding: 1px 5px; margin-top: 2px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .holiday-icon { font-size: 9px; }
+        .event-chip { font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; transition: opacity .15s; }
+        .event-chip:hover { opacity: .8; }
+        .more-events { font-size: 11px; color: var(--text-muted); cursor: pointer; }
+
+        /* ── Week/Day views ── */
+        .week-view, .day-view { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .week-view.hidden, .day-view.hidden { display: none; }
+        .time-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); }
+        .time-label { text-align: right; padding: 8px 12px 8px 0; font-size: 11px; color: var(--text-muted); border-right: 1px solid var(--border); }
+        .time-slot { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); height: 48px; position: relative; cursor: pointer; transition: background .15s; }
+        .time-slot:hover { background: rgba(59,130,246,.05); }
+        .week-day-header { text-align: center; padding: 12px; font-size: 12px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-transform: uppercase; letter-spacing: .5px; }
+        .week-day-header.today-col { color: var(--accent); }
+        .week-day-header.holiday-col { color: #f59e0b; background: rgba(245,158,11,.07); }
+        .week-day-header.past-day { opacity: .45; }
+
+        /* ── Notification toast ── */
+        .notification { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 20px; z-index: 2000; display: flex; align-items: center; gap: 12px; min-width: 280px; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,.4); transition: transform .3s, opacity .3s; }
+        .notification.hidden { display: none; }
+        .notification.success { border-color: rgba(16,185,129,.4); }
+        .notification.error { border-color: rgba(239,68,68,.4); }
+        .notification.warning { border-color: rgba(245,158,11,.4); }
+
+        /* ── Conflict alert modal ── */
+        #conflictModal .modal-content { max-width: 500px; }
+        .conflict-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+        .conflict-item { background: var(--surface2); border: 1px solid rgba(239,68,68,.3); border-radius: 10px; padding: 14px 16px; }
+        .conflict-item-title { font-weight: 700; color: var(--red); font-size: 14px; margin-bottom: 4px; }
+        .conflict-item-time { font-size: 12px; color: var(--text-muted); }
+        .conflict-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.3); border-radius: 20px; font-size: 11px; font-weight: 700; padding: 3px 10px; margin-bottom: 12px; }
+
+        /* ── Delay modal ── */
+        #delayModal .modal-content { max-width: 440px; }
+        .delay-event-info { background: var(--surface2); border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .delay-event-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+        .delay-event-time { font-size: 12px; color: var(--text-muted); }
+
+        /* ── Preferences modal ── */
+        #prefsModal .modal-content { max-width: 500px; }
+        .prefs-section { margin-bottom: 20px; }
+        .prefs-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+        .toggle-label { font-size: 13px; color: var(--text-dim); }
+        .toggle-switch { position: relative; width: 42px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; inset: 0; background: var(--surface3); border-radius: 24px; cursor: pointer; transition: .2s; }
+        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+        .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+        /* ── Optimize modal ── */
+        .opt-stat { flex:1; min-width:100px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; text-align:center; }
+        .opt-stat-num { font-size:26px; font-family:'Archivo Black',sans-serif; color:var(--accent); line-height:1; }
+        .opt-stat-label { font-size:11px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; letter-spacing:.05em; }
+        .opt-conflict-card { background:var(--surface2); border:1px solid rgba(239,68,68,.35); border-radius:10px; padding:12px 14px; }
+        .opt-conflict-title { font-size:13px; font-weight:600; margin-bottom:4px; }
+        .opt-conflict-meta { font-size:12px; color:var(--text-muted); }
+        .opt-reschedule-card { background:var(--surface2); border:1px solid rgba(16,185,129,.3); border-radius:10px; padding:12px 14px; }
+        .opt-reschedule-title { font-size:14px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .opt-time-row { display:flex; align-items:center; gap:8px; font-size:12px; flex-wrap:wrap; }
+        .opt-time-badge { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-family:monospace; }
+        .opt-arrow { color:var(--accent); font-size:14px; }
+        /* ── Logs modal ── */
+        #logsModal .modal-content { max-width: 560px; }
+        .log-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+        .log-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
+        .log-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .log-body { flex: 1; min-width: 0; }
+        .log-action { font-size: 13px; font-weight: 600; color: var(--text); }
+        .log-details { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .log-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+        .log-icon.login { background: rgba(59,130,246,.15); }
+        .log-icon.event { background: rgba(16,185,129,.15); }
+        .log-icon.delete { background: rgba(239,68,68,.15); }
+        .log-icon.optimize { background: rgba(124,58,237,.15); }
+        .log-icon.delay { background: rgba(245,158,11,.15); }
+        .log-icon.prefs { background: rgba(148,163,184,.15); }
+
+        /* ── Event detail modal ── */
+        .event-modal { max-width: 500px; }
+        .hidden { display: none !important; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     AUTH MODAL
+════════════════════════════════════════ -->
+<div id="authModal" class="modal">
+    <div class="modal-content auth-container">
+        <div class="auth-header">
+            <h1 class="brand-logo">ChronoSync</h1>
+            <p class="auth-subtitle">Your intelligent time orchestrator</p>
+        </div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Sign In</button>
+            <button class="auth-tab" data-tab="register">Create Account</button>
+        </div>
+        <form id="loginForm" class="auth-form active">
+            <div class="input-group">
+                <label for="loginUsername">Username</label>
+                <input type="text" id="loginUsername" required autocomplete="username">
+            </div>
+            <div class="input-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-primary">Sign In</button>
+        </form>
+        <form id="registerForm" class="auth-form">
+            <div class="input-group">
+                <label for="registerUsername">Username</label>
+                <input type="text" id="registerUsername" required autocomplete="username">
+            </div>
+            <div class="input-group">
+                <label for="registerEmail">Email</label>
+                <input type="email" id="registerEmail" required autocomplete="email">
+            </div>
+            <div class="input-group">
+                <label for="registerPassword">Password</label>
+                <input type="password" id="registerPassword" required autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn-primary">Create Account</button>
+        </form>
+        <div id="authMessage" class="auth-message"></div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════ -->
+<div id="mainApp" class="main-app hidden">
+    <header class="app-header">
+        <div class="header-left">
+            <h1 class="brand-logo">ChronoSync</h1>
+            <span class="user-greeting" id="userGreeting"></span>
+        </div>
+        <div class="header-right">
+            <button id="logsBtn" class="btn-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Logs
+            </button>
+            <button id="prefsBtn" class="btn-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                Preferences
+            </button>
+            <button id="optimizeBtn" class="btn-optimize">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                Optimize
+            </button>
+            <button id="logoutBtn" class="btn-secondary">Logout</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3 class="section-title">Quick Actions</h3>
+                <button id="addEventBtn" class="btn-action">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Event
+                </button>
+                <button id="todayBtn" class="btn-action">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Today
+                </button>
+            </div>
+            <div class="sidebar-section">
+                <h3 class="section-title">Calendar Views</h3>
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="month">Month</button>
+                    <button class="view-btn" data-view="week">Week</button>
+                    <button class="view-btn" data-view="day">Day</button>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <h3 class="section-title">Priority Filter</h3>
+                <div class="priority-filters">
+                    <label class="priority-checkbox"><input type="checkbox" checked data-priority="3"><span class="priority-label high">High Priority</span></label>
+                    <label class="priority-checkbox"><input type="checkbox" checked data-priority="2"><span class="priority-label medium">Medium Priority</span></label>
+                    <label class="priority-checkbox"><input type="checkbox" checked data-priority="1"><span class="priority-label low">Low Priority</span></label>
+                </div>
+            </div>
+            <div class="sidebar-section stats">
+                <h3 class="section-title">Statistics</h3>
+                <div class="stat-item"><span class="stat-label">This Week Events</span><span class="stat-value" id="totalEvents">0</span></div>
+                <div class="stat-item"><span class="stat-label">This Week Hours</span><span class="stat-value" id="totalHours">0</span></div>
+                <div class="stat-item"><span class="stat-label">Total Conflicts</span><span class="stat-value conflicts" id="conflictCount">0</span></div>
+            </div>
+        </aside>
+
+        <section class="calendar-section">
+            <div class="calendar-header">
+                <button id="prevBtn" class="nav-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+                <h2 id="currentMonthYear" class="calendar-title">January 2024</h2>
+                <button id="nextBtn" class="nav-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+            <div id="weekView" class="week-view hidden"></div>
+            <div id="dayView" class="day-view hidden"></div>
+        </section>
+    </main>
+</div>
+
+<!-- ══════════════════════════════════════
+     EVENT MODAL
+════════════════════════════════════════ -->
+<div id="eventModal" class="modal hidden">
+    <div class="modal-content event-modal">
+        <div class="modal-header">
+            <h2 id="eventModalTitle">New Event</h2>
+            <button class="close-btn" onclick="closeEventModal()">×</button>
+        </div>
+        <form id="eventForm">
+            <input type="hidden" id="eventId">
+            <div class="input-group">
+                <label for="eventTitle">Event Title</label>
+                <input type="text" id="eventTitle" required>
+            </div>
+            <div class="input-group">
+                <label for="eventDescription">Description</label>
+                <textarea id="eventDescription" rows="2"></textarea>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="eventStart">Start Time</label>
+                    <input type="datetime-local" id="eventStart" required>
+                </div>
+                <div class="input-group">
+                    <label for="eventEnd">End Time</label>
+                    <input type="datetime-local" id="eventEnd" required>
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="eventPriority">Priority</label>
+                    <select id="eventPriority">
+                        <option value="1">Low</option>
+                        <option value="2" selected>Medium</option>
+                        <option value="3">High</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="eventColor">Color</label>
+                    <input type="color" id="eventColor" value="#3b82f6">
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="eventAttendee">Attendee Email (for delay notifications)</label>
+                <input type="email" id="eventAttendee" placeholder="colleague@example.com">
+            </div>
+            <div class="input-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="eventDeadline">
+                    <span>Mark as deadline</span>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeEventModal()">Cancel</button>
+                <button type="button" id="delayEventBtn" class="btn-warning hidden">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    I'm Delayed
+                </button>
+                <button type="button" id="deleteEventBtn" class="btn-danger hidden">Delete</button>
+                <button type="submit" class="btn-primary">Save Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONFLICT ALERT MODAL
+════════════════════════════════════════ -->
+<div id="conflictModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⚡ Schedule Conflict Detected</h2>
+            <button class="close-btn" onclick="closeConflictModal(false)">×</button>
+        </div>
+        <div class="conflict-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="conflictCountText">1 conflict</span>
+        </div>
+        <p style="color:var(--text-dim);font-size:13px;line-height:1.6;">Your new event overlaps with the following scheduled event(s):</p>
+        <div class="conflict-list" id="conflictList"></div>
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:4px;">What would you like to do?</p>
+        <div class="modal-actions" style="justify-content:stretch;flex-direction:column;">
+            <button class="btn-primary" onclick="proceedWithConflict()" style="width:100%;">Save Anyway &amp; Keep Conflict</button>
+            <button class="btn-warning" onclick="optimizeAfterConflict()" style="width:100%;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                Auto-Optimize Schedule
+            </button>
+            <button class="btn-secondary" onclick="closeConflictModal()" style="width:100%;">Go Back &amp; Edit Time</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DELAY MODAL
+════════════════════════════════════════ -->
+<div id="delayModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⏱ Report Delay</h2>
+            <button class="close-btn" onclick="closeDelayModal()">×</button>
+        </div>
+        <div class="delay-event-info">
+            <div class="delay-event-name" id="delayEventName">Event Name</div>
+            <div class="delay-event-time" id="delayEventTime">Scheduled for...</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="input-group">
+                <label for="delayMinutes">Delay Duration (minutes)</label>
+                <input type="number" id="delayMinutes" value="15" min="5" max="240" step="5">
+            </div>
+            <div class="input-group">
+                <label for="tentativeTime">Tentative New Start Time (optional)</label>
+                <input type="datetime-local" id="tentativeTime">
+            </div>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;">
+                <label class="checkbox-label" style="margin-bottom:10px;">
+                    <input type="checkbox" id="notifyAttendee">
+                    <span style="font-weight:600;">Notify attendee via email</span>
+                </label>
+                <p style="font-size:12px;color:var(--text-muted);line-height:1.5;">An email will be sent to the attendee with the delay duration and tentative new start time.</p>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDelayModal()">Cancel</button>
+            <button class="btn-warning" onclick="submitDelay()">Report Delay &amp; Adjust Schedule</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PREFERENCES MODAL
+════════════════════════════════════════ -->
+<div id="prefsModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⚙️ Preferences</h2>
+            <button class="close-btn" onclick="closePrefsModal()">×</button>
+        </div>
+
+        <div class="prefs-section">
+            <div class="prefs-section-title">Email Notifications</div>
+            <div class="toggle-row">
+                <span class="toggle-label">Enable email reminders</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="prefEmailReminders" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="input-group" style="margin-top:10px;">
+                <label for="prefReminderMins">Reminder before meeting (minutes)</label>
+                <input type="number" id="prefReminderMins" value="10" min="1" max="60">
+            </div>
+        </div>
+
+        <div class="prefs-section">
+            <div class="prefs-section-title">Schedule Optimization</div>
+            <div class="toggle-row">
+                <span class="toggle-label">Auto-optimize on conflict</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="prefAutoOptimize">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="prefs-section">
+            <div class="prefs-section-title">Working Hours</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="prefWorkStart">Work Start</label>
+                    <input type="time" id="prefWorkStart" value="09:00">
+                </div>
+                <div class="input-group">
+                    <label for="prefWorkEnd">Work End</label>
+                    <input type="time" id="prefWorkEnd" value="18:00">
+                </div>
+            </div>
+        </div>
+
+        <div class="prefs-section">
+            <div class="prefs-section-title">Timezone</div>
+            <div class="input-group">
+                <label for="prefTimezone">Timezone</label>
+                <select id="prefTimezone">
+                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                    <option value="America/New_York">America/New_York (EST)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                    <option value="Europe/London">Europe/London (GMT)</option>
+                    <option value="Europe/Paris">Europe/Paris (CET)</option>
+                    <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                    <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                    <option value="Australia/Sydney">Australia/Sydney (AEST)</option>
+                    <option value="UTC">UTC</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closePrefsModal()">Cancel</button>
+            <button class="btn-primary" onclick="savePrefs()">Save Preferences</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     OPTIMIZE RESULT MODAL
+════════════════════════════════════════ -->
+<div id="optimizeModal" class="modal hidden" onclick="if(event.target===this)closeOptimizeModal()">
+    <div class="modal-content" style="max-width:580px;">
+        <div class="modal-header">
+            <h2 id="optimizeModalTitle">⚡ Schedule Optimization</h2>
+            <button class="close-btn" onclick="closeOptimizeModal()">×</button>
+        </div>
+
+        <!-- Summary bar -->
+        <div id="optimizeSummary" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;"></div>
+
+        <!-- Conflicts section -->
+        <div id="optimizeConflictsSection" class="hidden">
+            <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">⚠️ Conflicts Detected</div>
+            <div id="optimizeConflictsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+        </div>
+
+        <!-- Rescheduled events section -->
+        <div id="optimizeRescheduledSection" class="hidden">
+            <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">✅ Rescheduled Events</div>
+            <div id="optimizeRescheduledList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+        </div>
+
+        <!-- No conflicts message -->
+        <div id="optimizeNoConflicts" class="hidden" style="text-align:center;padding:32px 16px;color:var(--text-muted);">
+            <div style="font-size:36px;margin-bottom:10px;">🎉</div>
+            <div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">Schedule looks great!</div>
+            <div style="font-size:14px;">No conflicts were found. Your schedule is already optimized.</div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-primary" onclick="closeOptimizeModal()">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ACTIVITY LOGS MODAL
+════════════════════════════════════════ -->
+<div id="logsModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📋 Activity Logs</h2>
+            <button class="close-btn" onclick="closeLogsModal()">×</button>
+        </div>
+        <div class="log-list" id="logList">
+            <div style="text-align:center;padding:24px;color:var(--text-muted);">Loading logs...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     NOTIFICATION TOAST
+════════════════════════════════════════ -->
+<div id="notification" class="notification hidden">
+    <span id="notificationText"></span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let currentDate = new Date();
+let currentView = 'month';
+let allEvents = [];
+let pendingSaveData = null;
+let activeDelayEventId = null;
+
+// ═══════════════════════════════════════════
+// TAMIL NADU GOVERNMENT HOLIDAYS 2026
+// ═══════════════════════════════════════════
+const TN_HOLIDAYS_2026 = {
+    '2026-01-01': 'New Year\'s Day',
+    '2026-01-15': 'Pongal',
+    '2026-01-16': 'Thiruvalluvar Day',
+    '2026-01-17': 'Uzhavar Thirunal',
+    '2026-01-26': 'Republic Day',
+    '2026-02-01': 'Thai Poosam',
+    '2026-03-19': 'Telugu New Year',
+    '2026-03-21': 'Ramzan (Idul Fitr)',
+    '2026-03-31': 'Mahaveer Jayanthi',
+    '2026-04-03': 'Good Friday',
+    '2026-04-14': 'Tamil New Year / Dr. Ambedkar\'s Birthday',
+    '2026-05-01': 'May Day',
+    '2026-05-27': 'Bakrid (Eid al-Adha)',
+    '2026-06-26': 'Muharram',
+    '2026-08-15': 'Independence Day',
+    '2026-08-25': 'Eid-e-Milad',
+    '2026-09-04': 'Janmashtami',
+    '2026-09-15': 'Ganesh Chaturthi',
+    '2026-10-02': 'Gandhi Jayanti',
+    '2026-10-20': 'Vijaya Dashami',
+    '2026-11-08': 'Diwali',
+    '2026-12-25': 'Christmas'
+};
+
+/** Returns the YYYY-MM-DD key for a Date (local time) */
+function toDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+/** Returns the holiday name if the date is a TN holiday, else null */
+function getHolidayName(date) {
+    return TN_HOLIDAYS_2026[toDateKey(date)] || null;
+}
+
+/** Returns true if the date is strictly before today (ignoring time) */
+function isPastDate(date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+}
+
+/**
+ * Central guard called before opening the new-event modal.
+ * Returns true if scheduling is allowed, false if blocked.
+ */
+function checkDateAllowed(date) {
+    if (isPastDate(date)) {
+        showNotification(
+            'Sorry, we cannot use previous dates. Please select a future date.',
+            'error'
+        );
+        return false;
+    }
+    const holiday = getHolidayName(date);
+    if (holiday) {
+        showNotification(
+            `🎉 ${holiday} is a Government Holiday — scheduling is restricted on this day.`,
+            'warning'
+        );
+        return false;
+    }
+    return true;
+}
+
+// ═══════════════════════════════════════════
+// NOTIFY
+// ═══════════════════════════════════════════
+function showNotification(text, type = 'success') {
+    const el = document.getElementById('notification');
+    const textEl = document.getElementById('notificationText');
+    textEl.textContent = text;
+    el.className = `notification ${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + 'Form').classList.add('active');
+        document.getElementById('authMessage').textContent = '';
+    });
+});
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('loginUsername').value,
+            password: document.getElementById('loginPassword').value
+        })
+    });
+    const data = await res.json();
+    const msg = document.getElementById('authMessage');
+    if (data.success) {
+        msg.className = 'auth-message success';
+        msg.textContent = 'Welcome back!';
+        document.getElementById('userGreeting').textContent = `Hello, ${data.username}`;
+        setTimeout(() => {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            loadEvents();
+            loadPrefs();
+        }, 500);
+    } else {
+        msg.className = 'auth-message error';
+        msg.textContent = data.error || 'Login failed';
+    }
+});
+
+document.getElementById('registerForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('registerUsername').value,
+            email: document.getElementById('registerEmail').value,
+            password: document.getElementById('registerPassword').value
+        })
+    });
+    const data = await res.json();
+    const msg = document.getElementById('authMessage');
+    if (data.success) {
+        msg.className = 'auth-message success';
+        msg.textContent = 'Account created!';
+        document.getElementById('userGreeting').textContent = `Hello, ${document.getElementById('registerUsername').value}`;
+        setTimeout(() => {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            loadEvents();
+            loadPrefs();
+        }, 500);
+    } else {
+        msg.className = 'auth-message error';
+        msg.textContent = data.error || 'Registration failed';
+    }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('authModal').classList.remove('hidden');
+    allEvents = [];
+});
+
+// ═══════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════
+async function loadEvents() {
+    const res = await fetch('/api/events');
+    if (!res.ok) return;
+    allEvents = await res.json();
+    renderCalendar();
+    updateStats();
+}
+
+function getActivePriorities() {
+    return Array.from(document.querySelectorAll('[data-priority]'))
+        .filter(cb => cb.checked)
+        .map(cb => parseInt(cb.dataset.priority));
+}
+
+function filteredEvents() {
+    const priorities = getActivePriorities();
+    return allEvents.filter(e => priorities.includes(e.priority));
+}
+
+// ═══════════════════════════════════════════
+// CALENDAR RENDER
+// ═══════════════════════════════════════════
+function renderCalendar() {
+    if (currentView === 'month') renderMonthView();
+    else if (currentView === 'week') renderWeekView();
+    else renderDayView();
+}
+
+function renderMonthView() {
+    const grid = document.getElementById('calendarGrid');
+    document.getElementById('weekView').classList.add('hidden');
+    document.getElementById('dayView').classList.add('hidden');
+    grid.style.display = '';
+    grid.innerHTML = '';
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    document.getElementById('currentMonthYear').textContent =
+        new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
+        const h = document.createElement('div');
+        h.className = 'day-header';
+        h.textContent = d;
+        grid.appendChild(h);
+    });
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const evts = filteredEvents();
+
+    for (let i = 0; i < firstDay; i++) {
+        const prevDay = new Date(year, month, -firstDay + i + 1);
+        const cell = createDayCell(prevDay, evts, true);
+        grid.appendChild(cell);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+        const cell = createDayCell(new Date(year, month, d), evts, false);
+        if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === d) {
+            cell.classList.add('today');
+        }
+        grid.appendChild(cell);
+    }
+    const remaining = (7 - (firstDay + daysInMonth) % 7) % 7;
+    for (let d = 1; d <= remaining; d++) {
+        const cell = createDayCell(new Date(year, month + 1, d), evts, true);
+        grid.appendChild(cell);
+    }
+}
+
+function createDayCell(date, events, otherMonth) {
+    const cell = document.createElement('div');
+    const holidayName = getHolidayName(date);
+    const past = isPastDate(date);
+
+    let classes = 'day-cell';
+    if (otherMonth) classes += ' other-month';
+    if (past)       classes += ' past-day';
+    if (holidayName) classes += ' holiday';
+    cell.className = classes;
+
+    let dayNumHtml = `<div class="day-num">${date.getDate()}</div>`;
+    if (holidayName) {
+        dayNumHtml += `<div class="holiday-badge"><span class="holiday-icon">🏛</span>${holidayName}</div>`;
+    }
+    cell.innerHTML = dayNumHtml;
+
+    cell.onclick = () => {
+        if (!checkDateAllowed(date)) return;
+        openNewEventOnDate(date);
+    };
+
+    const dayEvents = events.filter(e => {
+        const d = new Date(e.start);
+        return d.getFullYear() === date.getFullYear() &&
+               d.getMonth() === date.getMonth() &&
+               d.getDate() === date.getDate();
+    });
+
+    const max = 3;
+    dayEvents.slice(0, max).forEach(ev => {
+        const chip = document.createElement('div');
+        chip.className = 'event-chip';
+        chip.style.background = (ev.color || '#3b82f6') + '33';
+        chip.style.color = ev.color || '#3b82f6';
+        chip.style.borderLeft = `3px solid ${ev.color || '#3b82f6'}`;
+        chip.textContent = ev.title;
+        chip.onclick = e => { e.stopPropagation(); openEditEvent(ev); };
+        cell.appendChild(chip);
+    });
+    if (dayEvents.length > max) {
+        const more = document.createElement('div');
+        more.className = 'more-events';
+        more.textContent = `+${dayEvents.length - max} more`;
+        cell.appendChild(more);
+    }
+    return cell;
+}
+
+function renderWeekView() {
+    document.getElementById('calendarGrid').style.display = 'none';
+    document.getElementById('dayView').classList.add('hidden');
+    const wv = document.getElementById('weekView');
+    wv.classList.remove('hidden');
+
+    const weekStart = new Date(currentDate);
+    weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+    const today = new Date();
+    document.getElementById('currentMonthYear').textContent =
+        weekStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        return d;
+    });
+
+    const evts = filteredEvents();
+    let html = '<div class="time-grid">';
+    html += '<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:12px;"></div>';
+    days.forEach(d => {
+        const isToday = d.toDateString() === today.toDateString();
+        const isPast  = isPastDate(d);
+        const holiday = getHolidayName(d);
+        let headerClass = `week-day-header ${isToday ? 'today-col' : ''} ${isPast ? 'past-day' : ''} ${holiday ? 'holiday-col' : ''}`;
+        let dayLabel = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+        if (holiday) dayLabel += ` 🏛`;
+        html += `<div class="${headerClass}" title="${holiday || ''}">${dayLabel}</div>`;
+    });
+
+    for (let h = 7; h < 21; h++) {
+        const label = h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+        html += `<div class="time-label">${label}</div>`;
+        days.forEach(d => {
+            const slotDate = new Date(d);
+            slotDate.setHours(h, 0, 0, 0);
+            const dayEvts = evts.filter(e => {
+                const es = new Date(e.start);
+                return es.getFullYear() === d.getFullYear() &&
+                       es.getMonth() === d.getMonth() &&
+                       es.getDate() === d.getDate() &&
+                       es.getHours() === h;
+            });
+            let content = dayEvts.map(ev =>
+                `<div class="event-chip" style="background:${ev.color}33;color:${ev.color};border-left:3px solid ${ev.color};cursor:pointer;font-size:10px;margin:1px 0;" onclick="openEditEventById(${ev.id})">${ev.title}</div>`
+            ).join('');
+            const isPast    = isPastDate(slotDate);
+            const isHoliday = !!getHolidayName(slotDate);
+            const slotStyle = isPast ? 'opacity:.4;cursor:not-allowed;' : isHoliday ? 'background:rgba(245,158,11,.06);cursor:not-allowed;' : '';
+            const clickGuard = (isPast || isHoliday) ? '' : `onclick="(function(){ const d=new Date('${slotDate.toISOString()}'); if(checkDateAllowed(d)) openNewEventOnDate(d); })()"`;
+            html += `<div class="time-slot" style="${slotStyle}" ${clickGuard}>${content}</div>`;
+        });
+    }
+    html += '</div>';
+    wv.innerHTML = html;
+}
+
+function renderDayView() {
+    document.getElementById('calendarGrid').style.display = 'none';
+    document.getElementById('weekView').classList.add('hidden');
+    const dv = document.getElementById('dayView');
+    dv.classList.remove('hidden');
+
+    const dayIsPast    = isPastDate(currentDate);
+    const dayHoliday   = getHolidayName(currentDate);
+    let titleText = currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    if (dayHoliday) titleText += ` 🏛 ${dayHoliday}`;
+    document.getElementById('currentMonthYear').textContent = titleText;
+
+    const evts = filteredEvents().filter(e => {
+        const d = new Date(e.start);
+        return d.getFullYear() === currentDate.getFullYear() &&
+               d.getMonth() === currentDate.getMonth() &&
+               d.getDate() === currentDate.getDate();
+    });
+
+    let html = '<div class="time-grid" style="grid-template-columns:60px 1fr;">';
+    for (let h = 7; h < 21; h++) {
+        const label = h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+        const dayEvts = evts.filter(e => new Date(e.start).getHours() === h);
+        let content = dayEvts.map(ev =>
+            `<div class="event-chip" style="background:${ev.color}33;color:${ev.color};border-left:3px solid ${ev.color};margin:2px 0;font-size:12px;padding:5px 10px;" onclick="openEditEventById(${ev.id})">${ev.title}</div>`
+        ).join('');
+        const slotDate = new Date(currentDate);
+        slotDate.setHours(h, 0, 0, 0);
+        const slotStyle = dayIsPast ? 'opacity:.4;cursor:not-allowed;' : dayHoliday ? 'background:rgba(245,158,11,.06);cursor:not-allowed;' : '';
+        const clickGuard = (dayIsPast || dayHoliday) ? '' : `onclick="(function(){ const d=new Date('${slotDate.toISOString()}'); if(checkDateAllowed(d)) openNewEventOnDate(d); })()"`;
+        html += `<div class="time-label">${label}</div><div class="time-slot" style="height:56px;${slotStyle}" ${clickGuard}>${content}</div>`;
+    }
+    html += '</div>';
+    dv.innerHTML = html;
+}
+
+function openEditEventById(id) {
+    const ev = allEvents.find(e => e.id === id);
+    if (ev) openEditEvent(ev);
+}
+
+// ═══════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════
+function updateStats() {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    const weekEvents = allEvents.filter(e => {
+        const d = new Date(e.start);
+        return d >= weekStart && d < weekEnd;
+    });
+
+    document.getElementById('totalEvents').textContent = weekEvents.length;
+    const hours = weekEvents.reduce((sum, e) => {
+        return sum + (new Date(e.end) - new Date(e.start)) / 3600000;
+    }, 0);
+    document.getElementById('totalHours').textContent = hours.toFixed(1);
+
+    let conflicts = 0;
+    for (let i = 0; i < allEvents.length; i++) {
+        for (let j = i + 1; j < allEvents.length; j++) {
+            const s1 = new Date(allEvents[i].start), e1 = new Date(allEvents[i].end);
+            const s2 = new Date(allEvents[j].start), e2 = new Date(allEvents[j].end);
+            if (s1 < e2 && s2 < e1) conflicts++;
+        }
+    }
+    document.getElementById('conflictCount').textContent = conflicts;
+}
+
+// ═══════════════════════════════════════════
+// EVENT MODAL
+// ═══════════════════════════════════════════
+function openNewEventOnDate(date) {
+    if (!checkDateAllowed(date)) return;
+    document.getElementById('eventModalTitle').textContent = 'New Event';
+    document.getElementById('eventId').value = '';
+    document.getElementById('eventForm').reset();
+    document.getElementById('eventColor').value = '#3b82f6';
+    document.getElementById('deleteEventBtn').classList.add('hidden');
+    document.getElementById('delayEventBtn').classList.add('hidden');
+
+    const pad = n => String(n).padStart(2, '0');
+    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const start = new Date(date);
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(10);
+    document.getElementById('eventStart').value = fmt(start);
+    document.getElementById('eventEnd').value = fmt(end);
+    document.getElementById('eventModal').classList.remove('hidden');
+}
+
+function openEditEvent(ev) {
+    document.getElementById('eventModalTitle').textContent = 'Edit Event';
+    document.getElementById('eventId').value = ev.id;
+    document.getElementById('eventTitle').value = ev.title;
+    document.getElementById('eventDescription').value = ev.description || '';
+    document.getElementById('eventStart').value = ev.start.slice(0, 16);
+    document.getElementById('eventEnd').value = ev.end.slice(0, 16);
+    document.getElementById('eventPriority').value = ev.priority;
+    document.getElementById('eventColor').value = ev.color || '#3b82f6';
+    document.getElementById('eventDeadline').checked = ev.is_deadline;
+    document.getElementById('eventAttendee').value = ev.attendee_email || '';
+    document.getElementById('deleteEventBtn').classList.remove('hidden');
+    document.getElementById('delayEventBtn').classList.remove('hidden');
+    activeDelayEventId = ev.id;
+    document.getElementById('eventModal').classList.remove('hidden');
+}
+
+function closeEventModal() {
+    document.getElementById('eventModal').classList.add('hidden');
+    pendingSaveData = null;
+}
+
+document.getElementById('addEventBtn').addEventListener('click', () => {
+    openNewEventOnDate(new Date());
+});
+
+// ── Real-time start-date field validation ──────────────────────────
+document.getElementById('eventStart').addEventListener('change', function () {
+    const val = this.value;
+    if (!val) return;
+    const chosen = new Date(val);
+    if (isPastDate(chosen)) {
+        showNotification(
+            'Sorry, we cannot use previous dates. Please select a future date.',
+            'error'
+        );
+        this.value = '';
+        return;
+    }
+    const holiday = getHolidayName(chosen);
+    if (holiday) {
+        showNotification(
+            `🎉 ${holiday} is a Government Holiday — scheduling is restricted on this day.`,
+            'warning'
+        );
+        this.value = '';
+    }
+});
+
+document.getElementById('eventForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await trySaveEvent();
+});
+
+async function trySaveEvent(forceSave = false) {
+    const id = document.getElementById('eventId').value;
+    const startVal = document.getElementById('eventStart').value;
+    const endVal   = document.getElementById('eventEnd').value;
+
+    // ── Date guards ─────────────────────────────────────────────────
+    const startDate = new Date(startVal);
+    if (!id) {  // only block new events; allow editing existing ones
+        if (isPastDate(startDate)) {
+            showNotification(
+                'Sorry, we cannot use previous dates. Please select a future date.',
+                'error'
+            );
+            return;
+        }
+        const holiday = getHolidayName(startDate);
+        if (holiday) {
+            showNotification(
+                `🎉 ${holiday} is a Government Holiday — scheduling is restricted on this day.`,
+                'warning'
+            );
+            return;
+        }
+    }
+    // ────────────────────────────────────────────────────────────────
+
+    const data = {
+        title: document.getElementById('eventTitle').value,
+        description: document.getElementById('eventDescription').value,
+        start: startVal,
+        end: endVal,
+        priority: parseInt(document.getElementById('eventPriority').value),
+        is_deadline: document.getElementById('eventDeadline').checked,
+        color: document.getElementById('eventColor').value,
+        attendee_email: document.getElementById('eventAttendee').value,
+        force_save: forceSave
+    };
+    if (id) data.edit_id = id;
+
+    if (id) {
+        // Editing: check conflicts
+        const conflictRes = await fetch('/api/events/check-conflicts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start: data.start, end: data.end, exclude_id: id })
+        });
+        const conflictData = await conflictRes.json();
+        if (conflictData.conflicts.length > 0 && !forceSave) {
+            pendingSaveData = { data, isEdit: true, id };
+            showConflictModal(conflictData.conflicts);
+            return;
+        }
+        const res = await fetch(`/api/events/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if ((await res.json()).success) {
+            closeEventModal();
+            loadEvents();
+            showNotification('Event updated successfully');
+        }
+    } else {
+        // New event
+        const res = await fetch('/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.error === 'conflict' && !forceSave) {
+            pendingSaveData = { data, isEdit: false };
+            showConflictModal(result.conflicts);
+            return;
+        }
+        if (result.success) {
+            closeEventModal();
+            loadEvents();
+            showNotification('Event scheduled! Confirmation email sent.');
+        } else if (result.error && result.error !== 'conflict') {
+            showNotification(result.error, 'error');
+        }
+    }
+}
+
+document.getElementById('deleteEventBtn').addEventListener('click', async () => {
+    const id = document.getElementById('eventId').value;
+    if (!id || !confirm('Delete this event?')) return;
+    const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+    if ((await res.json()).success) {
+        closeEventModal();
+        loadEvents();
+        showNotification('Event deleted');
+    }
+});
+
+document.getElementById('delayEventBtn').addEventListener('click', () => {
+    const ev = allEvents.find(e => e.id === parseInt(document.getElementById('eventId').value));
+    if (!ev) return;
+    document.getElementById('delayEventName').textContent = ev.title;
+    document.getElementById('delayEventTime').textContent = `Scheduled: ${new Date(ev.start).toLocaleString()}`;
+    document.getElementById('delayMinutes').value = 15;
+    document.getElementById('tentativeTime').value = '';
+    document.getElementById('notifyAttendee').checked = !!ev.attendee_email;
+    closeEventModal();
+    document.getElementById('delayModal').classList.remove('hidden');
+    activeDelayEventId = ev.id;
+});
+
+// ═══════════════════════════════════════════
+// CONFLICT MODAL
+// ═══════════════════════════════════════════
+function showConflictModal(conflicts) {
+    const list = document.getElementById('conflictList');
+    document.getElementById('conflictCountText').textContent =
+        `${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`;
+    list.innerHTML = conflicts.map(c => `
+        <div class="conflict-item">
+            <div class="conflict-item-title">⚡ ${c.title}</div>
+            <div class="conflict-item-time">
+                ${new Date(c.start).toLocaleString()} — ${new Date(c.end).toLocaleString()}
+            </div>
+            <div style="margin-top:6px;">
+                <span class="priority-label ${c.priority >= 3 ? 'high' : c.priority === 2 ? 'medium' : 'low'}">
+                    ${c.priority >= 3 ? 'High' : c.priority === 2 ? 'Medium' : 'Low'} Priority
+                </span>
+            </div>
+        </div>
+    `).join('');
+    document.getElementById('conflictModal').classList.remove('hidden');
+}
+
+function closeConflictModal(clearPending = true) {
+    document.getElementById('conflictModal').classList.add('hidden');
+    if (clearPending) pendingSaveData = null;
+}
+
+async function proceedWithConflict() {
+    // Capture data BEFORE closing modal (closeConflictModal nulls pendingSaveData)
+    const saved = pendingSaveData;
+    document.getElementById('conflictModal').classList.add('hidden');
+    pendingSaveData = null;
+
+    if (!saved) return;
+    const { data, isEdit, id } = saved;
+    data.force_save = true;
+
+    if (isEdit) {
+        const res = await fetch(`/api/events/${id}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) { closeEventModal(); loadEvents(); showNotification('Event saved with conflict noted', 'warning'); }
+        else showNotification(result.error || 'Save failed', 'error');
+    } else {
+        const res = await fetch('/api/events', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) { closeEventModal(); loadEvents(); showNotification('Event saved with conflict noted', 'warning'); }
+        else showNotification(result.error || 'Save failed', 'error');
+    }
+}
+
+async function optimizeAfterConflict() {
+    // Capture data BEFORE closing modal
+    const saved = pendingSaveData;
+    document.getElementById('conflictModal').classList.add('hidden');
+    pendingSaveData = null;
+
+    if (saved) {
+        const { data, isEdit, id } = saved;
+        data.force_save = true;
+        let saveOk = false;
+        if (isEdit) {
+            const res = await fetch(`/api/events/${id}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            });
+            saveOk = (await res.json()).success;
+        } else {
+            const res = await fetch('/api/events', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            });
+            saveOk = (await res.json()).success;
+        }
+        if (!saveOk) {
+            showNotification('Could not save event before optimizing', 'error');
+            return;
+        }
+        closeEventModal();
+    }
+
+    // Now optimize — event is already saved so count will be correct
+    const res = await fetch('/api/optimize', { method: 'POST' });
+    const result = await res.json();
+    loadEvents();
+    showNotification(result.message || 'Schedule optimized!');
+}
+
+// ═══════════════════════════════════════════
+// DELAY MODAL
+// ═══════════════════════════════════════════
+function closeDelayModal() {
+    document.getElementById('delayModal').classList.add('hidden');
+}
+
+async function submitDelay() {
+    if (!activeDelayEventId) return;
+    const mins = parseInt(document.getElementById('delayMinutes').value) || 15;
+    const tent = document.getElementById('tentativeTime').value;
+    const notify = document.getElementById('notifyAttendee').checked;
+    const res = await fetch(`/api/events/${activeDelayEventId}/delay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delay_minutes: mins, tentative_time: tent, notify_attendee: notify })
+    });
+    const result = await res.json();
+    if (result.success) {
+        closeDelayModal();
+        loadEvents();
+        let msg = `Delay reported: ${mins} min.`;
+        if (result.cascaded.length) msg += ` ${result.cascaded.length} event(s) auto-rescheduled.`;
+        if (notify) msg += ' Attendee notified.';
+        showNotification(msg, 'warning');
+    } else {
+        showNotification(result.error || 'Failed to report delay', 'error');
+    }
+}
+
+// ═══════════════════════════════════════════
+// PREFERENCES
+// ═══════════════════════════════════════════
+async function loadPrefs() {
+    const res = await fetch('/api/preferences');
+    if (!res.ok) return;
+    const prefs = await res.json();
+    document.getElementById('prefEmailReminders').checked = !!prefs.email_reminders;
+    document.getElementById('prefReminderMins').value = prefs.reminder_minutes || 10;
+    document.getElementById('prefAutoOptimize').checked = !!prefs.auto_optimize;
+    document.getElementById('prefWorkStart').value = prefs.work_start || '09:00';
+    document.getElementById('prefWorkEnd').value = prefs.work_end || '18:00';
+    document.getElementById('prefTimezone').value = prefs.timezone || 'Asia/Kolkata';
+}
+
+function closePrefsModal() {
+    document.getElementById('prefsModal').classList.add('hidden');
+}
+
+async function savePrefs() {
+    const data = {
+        email_reminders: document.getElementById('prefEmailReminders').checked ? 1 : 0,
+        reminder_minutes: parseInt(document.getElementById('prefReminderMins').value),
+        auto_optimize: document.getElementById('prefAutoOptimize').checked ? 1 : 0,
+        work_start: document.getElementById('prefWorkStart').value,
+        work_end: document.getElementById('prefWorkEnd').value,
+        timezone: document.getElementById('prefTimezone').value
+    };
+    const res = await fetch('/api/preferences', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    });
+    if ((await res.json()).success) {
+        closePrefsModal();
+        showNotification('Preferences saved');
+    }
+}
+
+document.getElementById('prefsBtn').addEventListener('click', () => {
+    loadPrefs();
+    document.getElementById('prefsModal').classList.remove('hidden');
+});
+
+// ═══════════════════════════════════════════
+// LOGS
+// ═══════════════════════════════════════════
+const LOG_ICONS = {
+    login: ['🔑', 'login'], logout: ['🚪', 'login'], register: ['👤', 'login'],
+    event_created: ['📅', 'event'], event_updated: ['✏️', 'event'], event_deleted: ['🗑️', 'delete'],
+    schedule_optimized: ['⚡', 'optimize'], delay_reported: ['⏱', 'delay'],
+    preferences_updated: ['⚙️', 'prefs']
+};
+
+function closeLogsModal() {
+    document.getElementById('logsModal').classList.add('hidden');
+}
+
+document.getElementById('logsBtn').addEventListener('click', async () => {
+    document.getElementById('logsModal').classList.remove('hidden');
+    const res = await fetch('/api/logs?limit=60');
+    const logs = await res.json();
+    const list = document.getElementById('logList');
+    if (!logs.length) {
+        list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);">No activity yet.</div>';
+        return;
+    }
+    list.innerHTML = logs.map(log => {
+        const [icon, cls] = LOG_ICONS[log.action] || ['📌', 'prefs'];
+        const details = log.details ? Object.entries(log.details).filter(([k]) => k !== 'password')
+            .map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join(' · ') : '';
+        const dt = new Date(log.timestamp).toLocaleString();
+        return `<div class="log-item">
+            <div class="log-icon ${cls}">${icon}</div>
+            <div class="log-body">
+                <div class="log-action">${log.action.replace(/_/g, ' ')}</div>
+                ${details ? `<div class="log-details">${details}</div>` : ''}
+            </div>
+            <div class="log-time">${dt}</div>
+        </div>`;
+    }).join('');
+});
+
+// ═══════════════════════════════════════════
+// NAV & VIEW
+// ═══════════════════════════════════════════
+document.getElementById('prevBtn').addEventListener('click', () => {
+    if (currentView === 'month') currentDate.setMonth(currentDate.getMonth() - 1);
+    else if (currentView === 'week') currentDate.setDate(currentDate.getDate() - 7);
+    else currentDate.setDate(currentDate.getDate() - 1);
+    renderCalendar();
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (currentView === 'month') currentDate.setMonth(currentDate.getMonth() + 1);
+    else if (currentView === 'week') currentDate.setDate(currentDate.getDate() + 7);
+    else currentDate.setDate(currentDate.getDate() + 1);
+    renderCalendar();
+});
+
+document.getElementById('todayBtn').addEventListener('click', () => {
+    currentDate = new Date();
+    renderCalendar();
+});
+
+document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.dataset.view;
+        renderCalendar();
+    });
+});
+
+document.querySelectorAll('[data-priority]').forEach(cb => {
+    cb.addEventListener('change', () => { renderCalendar(); updateStats(); });
+});
+
+function closeOptimizeModal() {
+    document.getElementById('optimizeModal').classList.add('hidden');
+}
+
+function fmtTime(iso) {
+    return new Date(iso).toLocaleString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+function priorityLabel(p) {
+    if (p >= 3) return '<span class="priority-label high">High</span>';
+    if (p === 2) return '<span class="priority-label medium">Medium</span>';
+    return '<span class="priority-label low">Low</span>';
+}
+
+document.getElementById('optimizeBtn').addEventListener('click', async () => {
+    // Show modal immediately in loading state
+    const modal = document.getElementById('optimizeModal');
+    document.getElementById('optimizeModalTitle').textContent = '⚡ Optimizing Schedule…';
+    document.getElementById('optimizeSummary').innerHTML =
+        '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Detecting conflicts and computing best reschedule…</div>';
+    document.getElementById('optimizeConflictsSection').classList.add('hidden');
+    document.getElementById('optimizeRescheduledSection').classList.add('hidden');
+    document.getElementById('optimizeNoConflicts').classList.add('hidden');
+    modal.classList.remove('hidden');
+
+    // Detect conflicts from current allEvents before calling optimize
+    const conflictPairs = [];
+    for (let i = 0; i < allEvents.length; i++) {
+        for (let j = i + 1; j < allEvents.length; j++) {
+            const s1 = new Date(allEvents[i].start), e1 = new Date(allEvents[i].end);
+            const s2 = new Date(allEvents[j].start), e2 = new Date(allEvents[j].end);
+            if (s1 < e2 && s2 < e1) {
+                conflictPairs.push({ a: allEvents[i], b: allEvents[j] });
+            }
+        }
+    }
+
+    // Call optimize API
+    const res = await fetch('/api/optimize', { method: 'POST' });
+    const result = await res.json();
+    await loadEvents();   // refresh events after optimization
+
+    // ── Summary bar ──
+    const rescheduled = result.rescheduled || [];
+    const conflictsFound = conflictPairs.length;
+    const resolved = Math.min(rescheduled.length, conflictsFound);
+
+    document.getElementById('optimizeModalTitle').textContent = '⚡ Optimization Report';
+    document.getElementById('optimizeSummary').innerHTML = `
+        <div class="opt-stat">
+            <div class="opt-stat-num" style="color:var(--red)">${conflictsFound}</div>
+            <div class="opt-stat-label">Conflicts Found</div>
+        </div>
+        <div class="opt-stat">
+            <div class="opt-stat-num" style="color:var(--green)">${rescheduled.length}</div>
+            <div class="opt-stat-label">Events Rescheduled</div>
+        </div>
+        <div class="opt-stat">
+            <div class="opt-stat-num" style="color:var(--accent)">${allEvents.length}</div>
+            <div class="opt-stat-label">Total Events</div>
+        </div>
+    `;
+
+    if (conflictsFound === 0 && rescheduled.length === 0) {
+        // No conflicts at all
+        document.getElementById('optimizeNoConflicts').classList.remove('hidden');
+    } else {
+        // ── Conflicts section ──
+        if (conflictPairs.length > 0) {
+            const conflictsEl = document.getElementById('optimizeConflictsSection');
+            conflictsEl.classList.remove('hidden');
+            document.getElementById('optimizeConflictsList').innerHTML = conflictPairs.map(({ a, b }) => `
+                <div class="opt-conflict-card">
+                    <div class="opt-conflict-title">
+                        <span style="color:var(--red)">⚠</span>
+                        <span style="font-weight:700">${a.title}</span>
+                        <span style="color:var(--text-muted);font-size:12px;font-weight:400;">overlaps with</span>
+                        <span style="font-weight:700">${b.title}</span>
+                    </div>
+                    <div class="opt-conflict-meta" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                        <span>${priorityLabel(a.priority)} ${a.title}: ${fmtTime(a.start)} → ${fmtTime(a.end)}</span>
+                    </div>
+                    <div class="opt-conflict-meta" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                        <span>${priorityLabel(b.priority)} ${b.title}: ${fmtTime(b.start)} → ${fmtTime(b.end)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ── Rescheduled section ──
+        if (rescheduled.length > 0) {
+            const reschedEl = document.getElementById('optimizeRescheduledSection');
+            reschedEl.classList.remove('hidden');
+            document.getElementById('optimizeRescheduledList').innerHTML = rescheduled.map(r => `
+                <div class="opt-reschedule-card">
+                    <div class="opt-reschedule-title">
+                        <span style="color:var(--green)">✅</span>
+                        ${r.title}
+                        ${priorityLabel(r.priority)}
+                    </div>
+                    <div class="opt-time-row">
+                        <span style="color:var(--text-muted);font-size:12px;">Was:</span>
+                        <span class="opt-time-badge" style="text-decoration:line-through;opacity:.6;">${fmtTime(r.old_start)}</span>
+                        <span class="opt-arrow">→</span>
+                        <span style="color:var(--text-muted);font-size:12px;">Now:</span>
+                        <span class="opt-time-badge" style="border-color:rgba(16,185,129,.5);color:var(--green);">${fmtTime(r.new_start)}</span>
+                    </div>
+                    ${r.reason ? `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);font-style:italic;">💡 ${r.reason}</div>` : ''}
+                </div>
+            `).join('');
+        } else if (conflictsFound > 0) {
+            // Had conflicts but nothing was rescheduled (e.g. all high priority)
+            document.getElementById('optimizeRescheduledSection').classList.remove('hidden');
+            document.getElementById('optimizeRescheduledList').innerHTML = `
+                <div style="padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);color:var(--text-muted);font-size:13px;">
+                    ⚠️ Conflicts were found but could not be auto-resolved. All conflicting events are high priority — please resolve manually.
+                </div>
+            `;
+        }
+    }
+
+    showNotification(result.message || 'Optimization complete');
+});
+</script>
+</body>
+</html>
